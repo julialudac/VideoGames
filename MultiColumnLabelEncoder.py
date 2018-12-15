@@ -14,7 +14,9 @@ class MultiColumnLabelEncoder:
 
     def fit(self, X, y=None):  # Now: only adapted to when we want all the columns of the DataFrame to be encoded
         for colname in X.columns.values:
-            le = LabelEncoder().fit(X[colname])
+            # "unk": We take care of possible values in the test set that may not be encountered during training
+            le = LabelEncoder().fit(list(X[colname]) + ["unk"])
+            print("list(X[colname]) + [unk]:", list(X[colname]) + ["unk"])
             self.les.append(le)
             self.classes.append(le.classes_)
 
@@ -23,11 +25,14 @@ class MultiColumnLabelEncoder:
         X the DataFrame to encode. X is a DataFrame.
         '''
         output = X.copy()
-        if self.colnames is not None:
+        if self.colnames is not None: # NOT USED IN OUR CASE
             for col in self.colnames:
                 output[col] = LabelEncoder().fit_transform(output[col])
         else:
             for ind in range(len(self.les)):
+                # We take care of possible values in the test set that may not be encountered during training
+                output[X.columns.values[ind]] = output[X.columns.values[ind]].map(
+                    lambda s: "unk" if s not in self.les[ind].classes_ else s)
                 output[X.columns.values[ind]] = self.les[ind].transform(output[X.columns.values[ind]])
         return output
 
