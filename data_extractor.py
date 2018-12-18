@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
@@ -15,16 +16,22 @@ def __ceil_to5_up__(seconds):
 
 
 def __remove_tX__(myrow):
-    # TODO: for more than t5, we have to remove all the tX!!!
+    """Get a new list of words with words of type tX (X a number) removed
+    TODO when possible: parallelize the loop
+    :param myrow: a list of words"""
+    tX = re.compile("t\d")
     newrow = []
     for word in myrow:
-        # if (word == ) # regex to do
-        pass
+        if tX.match(word):
+            # print("word", word, "to remove")
+            pass
+        else:
+            newrow.append(word)
     return newrow
 
 
 def __extract_data_till_time_list__(datafile, limit_seconds, data_role = 0, n_features=None):
-    """TODO: use remove_tX
+    """
     :param datafile: file containing the data in a csv format (with columns separated by commas)
     :param limit_seconds: seconds limit to pick the data
     :param data_role: 0 if it's data from train file used for training, 1 if it's data from train file
@@ -55,7 +62,7 @@ def __extract_data_till_time_list__(datafile, limit_seconds, data_role = 0, n_fe
                 myrow = myrow[:n_features]
             elif len(myrow) < n_features:
                 myrow = myrow + [None]*(n_features - len(myrow))
-        extracted.append(myrow)
+        extracted.append(__remove_tX__(myrow))
     return extracted, labels
 
 

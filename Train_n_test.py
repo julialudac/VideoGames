@@ -9,7 +9,9 @@ from MultiColumnLabelEncoder import MultiColumnLabelEncoder
 
 
 class Train_n_test:
-    """Train and test... and predict"""
+    """Train and test... and predict. How to use:
+    1/ Train
+    2/ Test on a test data (known labels) or/and estimate on a data without telling the labels"""
 
     def __init__(self):
         """Initialize the attributes (that are later filled) to None
