@@ -9,6 +9,7 @@ from MultiColumnLabelEncoder import MultiColumnLabelEncoder
 
 
 class Train_n_test:
+    """Train and test... and predict"""
 
     def __init__(self):
         """Initialize the attributes (that are later filled) to None
@@ -74,9 +75,27 @@ class Train_n_test:
         print("Accuracy:", np.sum(comparison_list), "/", len(comparison_list),
               "that means", np.sum(comparison_list)/len(comparison_list)*100, "%")
 
-    def estimate(self, to_estimate):
+    def estimate(self, to_estimate, saved_file=None):
         """Estimate labels on a data whose labels may not be known (usually the case)
-        :param to_estimate:
+        Either displays the estimated classes or save them to a csv file. These
+        estimation are in their decoded form.
+        :param to_estimate: a DataFrame of features whose labels are to be estimated
         :return:
         """
-        pass
+
+        # Get and encode to_estimate
+        encoded_to_estimate = self.features_encoder.transform(to_estimate)
+
+        # Get encoded predictions
+        predicted = self.estimator.predict(encoded_to_estimate.values)
+
+        # Decode predictions and build DataFrame
+        predicted = self.label_encoder.inverse_transform(predicted)
+        indices = range(1, len(predicted) + 1)
+        output_df = DataFrame({"RowId": indices, "prediction": predicted})
+
+        # Save/Display
+        if saved_file:
+            output_df.to_csv(saved_file, index=False)
+        else:
+            print("Decoded predictions:\n", output_df)
