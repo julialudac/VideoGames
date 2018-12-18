@@ -16,7 +16,7 @@ class MultiColumnLabelEncoder:
         for colname in X.columns.values:
             # "unk": We take care of possible values in the test set that may not be encountered during training
             le = LabelEncoder().fit(list(X[colname]) + ["unk"])
-            print("list(X[colname]) + [unk]:", list(X[colname]) + ["unk"])
+            # print("list(X[colname]) + [unk]:", list(X[colname]) + ["unk"])
             self.les.append(le)
             self.classes.append(le.classes_)
 
