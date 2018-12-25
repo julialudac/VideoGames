@@ -1,5 +1,7 @@
 import re
+import csv
 import pandas as pd
+import numpy as np
 from sklearn.preprocessing import LabelEncoder
 
 
@@ -17,7 +19,6 @@ def __ceil_to5_up__(seconds):
 
 def __remove_tX__(myrow):
     """Get a new list of words with words of type tX (X a number) removed
-    TODO when possible: parallelize the loop
     :param myrow: a list of words"""
     tX = re.compile("t\d")
     newrow = []
@@ -30,54 +31,116 @@ def __remove_tX__(myrow):
     return newrow
 
 
-def __extract_data_till_time_list__(datafile, limit_seconds, data_role = 0, n_features=None):
+def get_dataframe(path_file, training, limit_seconds):
     """
-    :param datafile: file containing the data in a csv format (with columns separated by commas)
-    :param limit_seconds: seconds limit to pick the data
-    :param data_role: 0 if it's data from train file used for training, 1 if it's data from train file
-    used for testing, 2 if it's data from test file.
-    :param n_features: None if data_role = 0.
-    Otherwise, indicates the number of features for each element.
-    :return a 2d list whose rows are the elements and non-empty labels if n_features=None
+    :param path_file:
+    :param training:
+    :return: A DataFrame with columns named id_player, played_race, 0... n, with n the number of kept actions.
     """
     limit_seconds = __ceil_to5_up__(limit_seconds)
     extracted = []
-    labels = []
-    for line in datafile:
-        if line == "\n":
-            continue
-        myrow = line.split(",")
-        if data_role == 0 or data_role == 1:
-            labels.append(myrow[0])
-        # print(myrow)
-        stop_word = "t" + str(limit_seconds)
-        #print("my row:", myrow)
-        try:
-            stop_index = myrow.index(stop_word)
-        except:
-            stop_index = -1
-        myrow = myrow[1:stop_index]
-        if data_role > 0:
-            if len(myrow) > n_features:
-                myrow = myrow[:n_features]
-            elif len(myrow) < n_features:
-                myrow = myrow + [None]*(n_features - len(myrow))
-        extracted.append(__remove_tX__(myrow))
-    return extracted, labels
+    largest_column_count = 0
+
+    # Loop the data lines
+    with open(path_file) as csvfile:
+        spamreader = csv.reader(csvfile, delimiter='\n')
+        for row in spamreader:
+            myrow = row[0].split(',')
+            stop_word = "t" + str(limit_seconds)
+            try:
+                stop_index = myrow.index(stop_word)
+            except:
+                stop_index = -1
+            myrow = myrow[0:stop_index]
+            myrow = __remove_tX__(myrow)
+            column_count = len(myrow)
+            extracted.append(myrow)
+            largest_column_count = column_count if largest_column_count < column_count else largest_column_count
+    column_names = []
+    if training:
+        column_names = ["id_player", "played_race"] + [i for i in range(0, largest_column_count - 2)]
+    else:
+        column_names = ["played_race"] + [i for i in range(0, largest_column_count - 1)]
+    return pd.DataFrame(extracted, columns = column_names)
 
 
-def extract_data_till_time_df(datafile, limit_seconds, data_role = 0, n_features=None):
+def transform_sample(df, training):
     """
-    :param datafile: file containing the data in a csv format (with columns separated by commas)
-    :param limit_seconds: seconds limit to pick the data
-    :param is_training: True if data is from training data csv
-    :return a DataFrame whose rows are the elements and non-empty (list of) labels if is_training=True.
-    Missing values are replaced by "unk" (Cons: "unk" is the garbage class => large amount of it for each feature)
+    BEWARE: Doesn't work on the shuffled data, even reidexing them <=> Only works with a df from a whole csv.
+    Not fatal for the result to handle, but quite penalizing to online test.
+    :return: a DataFrame resulting from df where for each sample,
+    we will have the frequency of actions + played_race (+ id_player).
+    Are the values encoded or not? It depends on your goal:
+    - not encoded is better to debug this function and have an outlook at what it does
+    - encoded allows to move on into the program: training and testing
     """
-    extracted, labels =__extract_data_till_time_list__(datafile, limit_seconds, data_role=data_role,
-                                                       n_features=n_features)
-    extracted_df = pd.DataFrame(extracted)
-    extracted_df.fillna(inplace=True, value="unk")
-    return extracted_df, labels
+    df_training_numerical = __subtransform_sample__(0, df, training)
+    for index, _ in df.iterrows():
+        if index != 0:
+            df_sample = __subtransform_sample__(index, df, training)
+            df_training_numerical = pd.concat([df_training_numerical, df_sample], sort=False)
+    df_training_numerical.fillna(0, inplace=True)
+    return df_training_numerical
 
+
+def __subtransform_sample__(index, df, training):
+    column_index_start = 2 if training else 1
+    old_row = df.iloc[index,column_index_start:]
+    actions, counts = np.unique(old_row.dropna().values, return_counts=True)
+    first_part_row = df.iloc[index,0:column_index_start].values
+    second_part_row = np.array([count for action, count in zip(actions, counts)])
+    row = np.append(first_part_row, second_part_row).reshape(1, -1)
+    columns_for_row = ["played_race"] + list(actions)
+    if training:
+        columns_for_row = ["id_player"] + columns_for_row
+    return pd.DataFrame(row, index=[index], columns=columns_for_row)
+
+
+""" BAD IDEA: Training data must be consistent wrt test/validation data!!!
+def conform_transformed_df(df_train, df_test):
+    :param df_test: A transformed (ie DataFrame with the counts) test DataFrame
+    :param df_train: A transformed train DataFrame
+    :return: returns transformed DataFrame whose columns names are intersections of column names of train and test
+    test_cols = set(df_test.columns.values)
+    train_cols = set(df_train.columns.values)
+    kept_cols = test_cols.intersection(train_cols)
+    print("kept_cols:",kept_cols)
+    conformed_train = df_train[list(kept_cols)]
+    conformed_test = df_test[list(kept_cols)]
+    return conformed_train, conformed_test
+"""
+
+
+# Difficulty to this function: ***** => may have errors
+def conform_test_to_training(df_train, df_test):
+    """
+    :param df_train: A transformed (ie DataFrame with the counts) train DataFrame
+    :param df_test: A transformed (ie DataFrame with the counts) test DataFrame
+    :return: returns a transformed DataFrame whose columns names are left join of column names of train and test
+    """
+    """Let's create a dummy element that has values in the lef join of column names of train and test
+    The dummy element must be added to the array composing the test dataset
+    """
+    test_cols = set(df_test.columns.values)
+    #print("test cols:", test_cols, "size:", len(test_cols))
+    train_cols = set(df_train.columns.values) # Columns to keep for the conformed test DataFrame
+    #print("train_cols:", train_cols, "size:", len(train_cols))
+    intersection_cols = test_cols.intersection(train_cols)
+    one_el_list = [-1] * len(train_cols)
+    df_test = df_test[list(intersection_cols)]  # We drop the cols that are not in train
+    test_array = df_test.values.tolist() # df_test.values is a np-array
+    test_array.append(one_el_list)
+    """But to build the conformed DataFrame, we need to have the attributes in the same order as the intersection_cols
+    is used to discard the columns of df_test that are not in df_train. So to build the final conformed DataFrame,
+    We need a list of attributes composed of the intersection + the attributes on df_train that are not in intersection
+    """
+    extra_cols = train_cols - intersection_cols
+    testordered_train_cols = list(intersection_cols) + list(extra_cols)
+    conformed_test = pd.DataFrame(test_array, columns=testordered_train_cols)
+    conformed_test = conformed_test[conformed_test['id_player'] != -1]
+    """ Now, it's also important to reorder the columns of the conformed DataFrame into to predict correctly (since it uses
+    arrays and not DataFrame, we must have same columns order for train and test dataframes.
+    """
+    conformed_test = conformed_test[df_train.columns.values]
+    return conformed_test
 
