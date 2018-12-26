@@ -101,11 +101,13 @@ class ExtractTrainValidateTest:
             self.df_testing_numerical = de.transform_sample(self.encoded_df_testing, False)
 
         # Conform validation and/or testing DataFrame(s) columns to training DataFrame columns
-        self.df_validation_numerical = de.conform_test_to_training(self.df_training_numerical,
-                                                                   self.df_validation_numerical)
         if validation_file:
+            self.df_validation_numerical = de.conform_test_to_training(self.df_training_numerical,
+                                                                       self.df_validation_numerical)
             self.df_validation_numerical = self.df_validation_numerical.fillna(0)
         if testing_file:
+            self.df_testing_numerical = de.conform_test_to_training(self.df_training_numerical,
+                                                                       self.df_testing_numerical, False)
             self.df_testing_numerical = self.df_testing_numerical.fillna(0)
 
         self.tnv = TrainValidateTest(n_estimators, max_depth)

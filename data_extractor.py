@@ -111,7 +111,7 @@ def conform_transformed_df(df_train, df_test):
 """
 
 
-# Difficulty to this function: ***** => may have errors
+# Difficulty to implement this function: ***** => may have errors
 def conform_test_to_training(df_train, df_test, train=True):
     """
     :param df_train: A transformed (ie DataFrame with the counts) train DataFrame
@@ -155,5 +155,11 @@ def conform_test_to_training(df_train, df_test, train=True):
     if not train:
         train_cols.remove('id_player')
     conformed_test = conformed_test[train_cols]
+
+    # print("train columns:", df_test.columns.values)
+    # print("test columns:", df_test.columns.values)
+    # print("intersection:", intersection_cols)
+    # print("extra:", )
+
     return conformed_test
 
