@@ -35,22 +35,23 @@ class ThreeFeaturesEncoder:
         self.possible_actions_from_categ_to_num = {value: index for value, index in
                                       zip(self.possible_actions, range(0, len(self.possible_actions)))}
 
-    def encode_df(self, to_encode):
+    def encode_df(self, to_encode, train=True):
         """
         :param to_encode: The DataFrame with columns id_player, played_race, 0... n,
         with n the number of kept actions. Values are not encoded
+        :param train: If the DataFrame has column "id_player_from_categ_to_num".
         :return: The same DataFrame with its values encoded
-        If this is a test DataFrame (ie no column named 'id_player'), a new column id_player is added with 0's.
         """
 
-        # The dataframe with the encoded ids
-        encoded = to_encode.replace(self.id_player_from_categ_to_num)
+        # The dataframe with the encoded races
+        encoded = to_encode.replace(self.played_race_from_categ_to_num)
 
-        # The dataframe with the encoded ids and races
-        encoded = encoded.replace(self.played_race_from_categ_to_num)
-
-        # The dataframe with the encoded ids, races and actions
+        # The dataframe with the encoded races and actions
         encoded = encoded.replace(self.possible_actions_from_categ_to_num)
+
+        if train:
+            # The dataframe with the encoded ids, races and actions
+            encoded = encoded.replace(self.id_player_from_categ_to_num)
 
         return encoded
 

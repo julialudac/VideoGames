@@ -134,17 +134,12 @@ def conform_test_to_training(df_train, df_test, train=True):
     We need a list of attributes composed of the intersection + the attributes on df_train that are not in intersection
     """
     extra_cols = train_cols - intersection_cols
-    print("train:", train)
-    print("intersection:", intersection_cols)
-    print("extra:", extra_cols)
     if not train:
         extra_cols.remove('id_player')
-    print("extra after:", extra_cols)
 
     # The column from train DataFrame that ordered according to te columns of test DataFrame minus id_player if we want
     # to conform a test DataFrame (and not a validation DataFrame)
     testordered_train_cols = list(intersection_cols) + list(extra_cols)
-    print("testordered_train_cols:", testordered_train_cols)
 
     # To maintain the columns, we append a dummy element that we will remove further
     one_el_list = [-1] * len(testordered_train_cols)

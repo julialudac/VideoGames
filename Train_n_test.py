@@ -43,12 +43,11 @@ class TrainValidateTest:
 
     def test(self, df_testing_numerical, encoder):
         """Test => Output labels in a csv file.
-        :param df_testing_numerical: Encoded test DataFrame (the DataFrame includes the labels that are all 0's) whose
+        :param df_testing_numerical: Encoded test DataFrame whose
         values are the counts of the actions, the player id and the played race
         :param encoder: The encoder that was used to ecode the DataFrame passed as a parameter
         """
-        nolabel_df_testing = df_testing_numerical.drop(axis=1, labels="id_player")
-        predicted = self.decision_tree.predict(nolabel_df_testing.values)
+        predicted = self.decision_tree.predict(df_testing_numerical.values)
         decoded_predicted = encoder.decode_labels(predicted)  # We decode the encoded predictions
         indices = range(1, len(predicted) + 1)
         output_df = pd.DataFrame({"RowId": indices, "prediction": decoded_predicted})
@@ -59,42 +58,63 @@ class ExtractTrainValidateTest:
     """
     1/ Extract and process DataFrames
     2/ Train and validate => it will yield an accuracy
-    This class is not really to output estimations about players' ids but more used to find the best
-    hyperparameters: t, n_estimators, max_depth, df_training, df_validation to get the best accuracy.
-    Then, when you are happy with the parameters, you can use them into notebook
-    "extracting_training_validating_testing" to output results for a test dataset in a csv file.
+    This class is
+    - either to manually estimate the best
+    hyperparameters: t, n_estimators and max_depth to get the best accuracy.
+    So specify a validation_file that will show a score given the chosen parameters.
+    - or when you are happy with the parameters, you can output the results to a csv
+    So specify a testing_file.
+    - ... or a same instance can be used for both functions.
     """
 
     def __init__(self):
         self.tnv = None
 
-    def extract_and_process_df(self, t):
+    def extract_and_process_df(self, t, n_estimators, max_depth,
+                               training_file, validation_file=None, testing_file=None):
         """
         :param t: The time limit where to stop extracting the data. When not a multiple of 5, it is rounded to
         upper 5.
         """
-        # Prepare train and test original datasets (+ labels)
-        self.df_training = de.get_dataframe("../input/minitrain.CSV", training=True, limit_seconds=t)  # OK
-        self.df_validation = de.get_dataframe("../input/minitest.CSV", training=True, limit_seconds=t)  # OK
+        # Prepare train and validation and/or test original datasets (+ labels)
+        self.df_training = de.get_dataframe(training_file, training=True, limit_seconds=t)  # OK
+        if validation_file:
+            self.df_validation = de.get_dataframe(validation_file, training=True, limit_seconds=t)  # OK
+        if testing_file:
+            self.df_testing = de.get_dataframe(testing_file, training=False, limit_seconds=t)  # OK
 
         # Encoding
         # -- Learning dataset encoding
         self.encoder = ThreeFeaturesEncoder(self.df_training)
-        # -- Encoding dataset : training and validation
+        # -- Encoding dataset : training and validation and/or testing
         self.encoded_df_training = self.encoder.encode_df(self.df_training)
-        self.encoded_df_validation = self.encoder.encode_df(self.df_validation)
+        if validation_file:
+            self.encoded_df_validation = self.encoder.encode_df(self.df_validation)
+        if testing_file:
+            self.encoded_df_testing = self.encoder.encode_df(self.df_testing, False)
 
         # Getting the datasets we're gonna work on: Convert dataset into another one
         self.df_training_numerical = de.transform_sample(self.encoded_df_training, True)
-        self.df_validation_numerical = de.transform_sample(self.encoded_df_validation, True)
+        if validation_file:
+            self.df_validation_numerical = de.transform_sample(self.encoded_df_validation, True)
+        if testing_file:
+            self.df_testing_numerical = de.transform_sample(self.encoded_df_testing, False)
 
-        # Conform validation DataFrame columns to training DataFrame columns
+        # Conform validation and/or testing DataFrame(s) columns to training DataFrame columns
         self.df_validation_numerical = de.conform_test_to_training(self.df_training_numerical,
                                                                    self.df_validation_numerical)
-        self.df_validation_numerical = self.df_validation_numerical.fillna(0)
+        if validation_file:
+            self.df_validation_numerical = self.df_validation_numerical.fillna(0)
+        if testing_file:
+            self.df_testing_numerical = self.df_testing_numerical.fillna(0)
 
-    def train_and_validate(self, n_estimators, max_depth):
         self.tnv = TrainValidateTest(n_estimators, max_depth)
+
+    def train(self):
         self.tnv.train(self.df_training_numerical)
+
+    def validate(self):
         self.tnv.validate(self.df_validation_numerical)
 
+    def test(self):
+        self.tnv.test(self.df_testing_numerical, self.encoder)
