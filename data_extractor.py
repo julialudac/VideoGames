@@ -112,7 +112,7 @@ def conform_transformed_df(df_train, df_test):
 
 
 # Difficulty to this function: ***** => may have errors
-def conform_test_to_training(df_train, df_test):
+def conform_test_to_training(df_train, df_test, train=True):
     """
     :param df_train: A transformed (ie DataFrame with the counts) train DataFrame
     :param df_test: A transformed (ie DataFrame with the counts) test DataFrame
@@ -126,21 +126,39 @@ def conform_test_to_training(df_train, df_test):
     train_cols = set(df_train.columns.values) # Columns to keep for the conformed test DataFrame
     #print("train_cols:", train_cols, "size:", len(train_cols))
     intersection_cols = test_cols.intersection(train_cols)
-    one_el_list = [-1] * len(train_cols)
     df_test = df_test[list(intersection_cols)]  # We drop the cols that are not in train
     test_array = df_test.values.tolist() # df_test.values is a np-array
-    test_array.append(one_el_list)
+
     """But to build the conformed DataFrame, we need to have the attributes in the same order as the intersection_cols
     is used to discard the columns of df_test that are not in df_train. So to build the final conformed DataFrame,
     We need a list of attributes composed of the intersection + the attributes on df_train that are not in intersection
     """
     extra_cols = train_cols - intersection_cols
+    print("train:", train)
+    print("intersection:", intersection_cols)
+    print("extra:", extra_cols)
+    if not train:
+        extra_cols.remove('id_player')
+    print("extra after:", extra_cols)
+
+    # The column from train DataFrame that ordered according to te columns of test DataFrame minus id_player if we want
+    # to conform a test DataFrame (and not a validation DataFrame)
     testordered_train_cols = list(intersection_cols) + list(extra_cols)
+    print("testordered_train_cols:", testordered_train_cols)
+
+    # To maintain the columns, we append a dummy element that we will remove further
+    one_el_list = [-1] * len(testordered_train_cols)
+    test_array.append(one_el_list)
+
     conformed_test = pd.DataFrame(test_array, columns=testordered_train_cols)
-    conformed_test = conformed_test[conformed_test['id_player'] != -1]
-    """ Now, it's also important to reorder the columns of the conformed DataFrame into to predict correctly (since it uses
+    conformed_test = conformed_test[conformed_test['played_race'] != -1] # Condition on whatever existing column
+    """ Now, it's also important to reorder the columns of the conformed DataFrame like the train DataFrame 
+    to predict correctly (since it uses
     arrays and not DataFrame, we must have same columns order for train and test dataframes.
     """
-    conformed_test = conformed_test[df_train.columns.values]
+    train_cols = df_train.columns.values.tolist()
+    if not train:
+        train_cols.remove('id_player')
+    conformed_test = conformed_test[train_cols]
     return conformed_test
 
