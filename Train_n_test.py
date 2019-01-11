@@ -2,6 +2,7 @@ import csv
 import numpy as np # linear algebra
 import os
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import time
 
 from sklearn import tree
 from sklearn.ensemble import RandomForestClassifier
@@ -28,8 +29,11 @@ class TrainValidateTest:
         """Train a random forest
         :param df_training_numerical: Encoded train DataFrame (the DataFrame includes the labels) whose values are the counts of the
         actions, the player id and the played race
+        :return: training time
         """
+        start_time = time.time()
         self.decision_tree.fit(df_training_numerical.iloc[:, 1:].values, df_training_numerical.id_player.values)
+        return time.time() - start_time
 
     def validate(self, df_validation_numerical):
         """Validate => displays the score of the learnt classifier on a validation data.
@@ -39,7 +43,8 @@ class TrainValidateTest:
         nolabel_df_validation = df_validation_numerical.drop(axis=1, labels="id_player")
         predicted = self.decision_tree.predict(nolabel_df_validation.values)
         labels = df_validation_numerical.id_player.values
-        print("accuracy:", ae.get_accuracy(labels, predicted))
+        # print("accuracy:", ae.get_accuracy(labels, predicted))
+        return ae.get_accuracy(labels, predicted)
 
     def test(self, df_testing_numerical, encoder):
         """Test => Output labels in a csv file.
@@ -70,7 +75,7 @@ class ExtractTrainValidateTest:
     def __init__(self):
         self.tnv = None
 
-    def extract_and_process_df(self, t, n_estimators, max_depth,
+    def extract_and_process_df(self, t,
                                training_file, validation_file=None, testing_file=None):
         """
         :param t: The time limit where to stop extracting the data. When not a multiple of 5, it is rounded to
@@ -110,13 +115,16 @@ class ExtractTrainValidateTest:
                                                                        self.df_testing_numerical, False)
             self.df_testing_numerical = self.df_testing_numerical.fillna(0)
 
+    def init_tnv(self, n_estimators, max_depth):
         self.tnv = TrainValidateTest(n_estimators, max_depth)
 
     def train(self):
-        self.tnv.train(self.df_training_numerical)
+        time_spent = self.tnv.train(self.df_training_numerical)
+        return time_spent
 
     def validate(self):
-        self.tnv.validate(self.df_validation_numerical)
+        acc = self.tnv.validate(self.df_validation_numerical)
+        return acc
 
     def test(self):
         self.tnv.test(self.df_testing_numerical, self.encoder)
