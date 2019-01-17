@@ -161,7 +161,7 @@ def conform_test_to_training(df_train, df_test, train=True):
     # print("intersection:", intersection_cols)
     # print("extra:", )
 
-    print("We have", len(testordered_train_cols), "features.")
+    #print("We have", len(testordered_train_cols), "features.")
 
     return conformed_test
 
