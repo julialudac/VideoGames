@@ -49,6 +49,7 @@ class ThreeFeaturesEncoder:
         # The dataframe with the encoded races and actions. Contrarily to the id and race,
         # this is the columns' names that are encoded, not the values that are just counts.
         encoded = encoded.rename(self.possible_actions_from_categ_to_num)
+        # optional TODO: is it really useful to encode columns' name (and does it work but we don't care if useless???
 
         if train:
             # The dataframe with the encoded ids, races and actions
