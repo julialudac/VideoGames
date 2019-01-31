@@ -111,7 +111,7 @@ def conform_transformed_df(df_train, df_test):
 """
 
 
-# Difficulty to implement this function: ***** => may have errors
+# Difficulty to implement this function: *****
 def conform_test_to_training(df_train, df_test, train=True):
     """
     :param df_train: A transformed (ie DataFrame with the counts) train DataFrame
@@ -121,13 +121,14 @@ def conform_test_to_training(df_train, df_test, train=True):
     """Let's create a dummy element that has values in the lef join of column names of train and test
     The dummy element must be added to the array composing the test dataset
     """
+
     test_cols = set(df_test.columns.values)
-    #print("test cols:", test_cols, "size:", len(test_cols))
-    train_cols = set(df_train.columns.values) # Columns to keep for the conformed test DataFrame
-    #print("train_cols:", train_cols, "size:", len(train_cols))
+    # print("test cols:", test_cols, "size:", len(test_cols))
+    train_cols = set(df_train.columns.values)  # Columns to keep for the conformed test DataFrame
+    # print("train_cols:", train_cols, "size:", len(train_cols))
     intersection_cols = test_cols.intersection(train_cols)
     df_test = df_test[list(intersection_cols)]  # We drop the cols that are not in train
-    test_array = df_test.values.tolist() # df_test.values is a np-array
+    test_array = df_test.values.tolist()  # df_test.values is a np-array
 
     """But to build the conformed DataFrame, we need to have the attributes in the same order as the intersection_cols
     is used to discard the columns of df_test that are not in df_train. So to build the final conformed DataFrame,
@@ -146,7 +147,7 @@ def conform_test_to_training(df_train, df_test, train=True):
     test_array.append(one_el_list)
 
     conformed_test = pd.DataFrame(test_array, columns=testordered_train_cols)
-    conformed_test = conformed_test[conformed_test['played_race'] != -1] # Condition on whatever existing column
+    conformed_test = conformed_test[conformed_test['played_race'] != -1]  # Condition on whatever existing column
     """ Now, it's also important to reorder the columns of the conformed DataFrame like the train DataFrame 
     to predict correctly (since it uses
     arrays and not DataFrame, we must have same columns order for train and test dataframes.
@@ -161,7 +162,7 @@ def conform_test_to_training(df_train, df_test, train=True):
     # print("intersection:", intersection_cols)
     # print("extra:", )
 
-    #print("We have", len(testordered_train_cols), "features.")
+    # print("We have", len(testordered_train_cols), "features.")
 
     return conformed_test
 

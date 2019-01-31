@@ -1,4 +1,3 @@
-
 import pandas as pd
 from sklearn.preprocessing import LabelEncoder
 
@@ -10,17 +9,18 @@ class ThreeFeaturesEncoder:
     """
     def __init__(self, df_training):
         """ Learning encodings are done here.
-        :param df_training: DataFrame whose values are used to encode
+        :param df_training: DataFrame whose values are used to encode. Nowadays, the DataFrame is not the extracted DataFrame
+        but the transformed one which contains actions' counts.
         Properties:
         - id_player_unique_values: a Series of all the player's ids (that are strings)
         - played_race_unique_values: a Series of all the possible races
-        -
+        - possible_actions : a set of possible actions
         """
 
         # Unique values
         self.id_player_unique_values = pd.Series(df_training.id_player.unique())
         self.played_race_unique_values = pd.Series(df_training.played_race.unique())
-        self.possible_actions = set() # It is more complex to find that the previous sets
+        self.possible_actions = set() # It is more complex to find than the previous sets
         for column in df_training.columns[2:]:
             for action in df_training.loc[:, column].unique():
                 if pd.notna(action):
@@ -46,8 +46,9 @@ class ThreeFeaturesEncoder:
         # The dataframe with the encoded races
         encoded = to_encode.replace(self.played_race_from_categ_to_num)
 
-        # The dataframe with the encoded races and actions
-        encoded = encoded.replace(self.possible_actions_from_categ_to_num)
+        # The dataframe with the encoded races and actions. Contrarily to the id and race,
+        # this is the columns' names that are encoded, not the values that are just counts.
+        encoded = encoded.rename(self.possible_actions_from_categ_to_num)
 
         if train:
             # The dataframe with the encoded ids, races and actions
@@ -64,6 +65,3 @@ class ThreeFeaturesEncoder:
         for encoded in to_decode:
             decoded.append(self.id_player_unique_values[encoded])
         return decoded
-
-
-
