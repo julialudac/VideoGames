@@ -1,12 +1,12 @@
 import csv
-import numpy as np # linear algebra
+import numpy as np  # linear algebra
 import os
-import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
+import pandas as pd  # data processing, CSV file I/O (e.g. pd.read_csv)
 import time
 
 from sklearn import tree
 from sklearn.ensemble import RandomForestClassifier
-from sklearn.model_selection  import  train_test_split
+from sklearn.model_selection import train_test_split
 
 # personal imports
 import data_extractor as de
@@ -23,7 +23,7 @@ class TrainValidateTest:
     """
 
     def __init__(self, n_estimators, max_depth):
-        self.decision_tree = RandomForestClassifier(n_estimators = n_estimators, max_depth = max_depth)
+        self.decision_tree = RandomForestClassifier(n_estimators=n_estimators, max_depth=max_depth)
 
     def train(self, df_training_numerical):
         """Train a random forest
@@ -88,43 +88,43 @@ class ExtractTrainValidateTest:
         if testing_file:
             self.df_testing = de.get_dataframe(testing_file, training=False, limit_seconds=t)  # OK
 
+        # Getting the datasets we're gonna work on: Convert dataset into another one
+        self.df_training_numerical = de.transform_sample(self.df_training, True)
+        if validation_file:
+            self.df_validation_numerical = de.transform_sample(self.df_validation, True)
+        if testing_file:
+            self.df_testing_numerical = de.transform_sample(self.df_testing, False)
+
         # Encoding
         # -- Learning dataset encoding
         self.encoder = ThreeFeaturesEncoder(self.df_training)
         # -- Encoding dataset : training and validation and/or testing
-        self.encoded_df_training = self.encoder.encode_df(self.df_training)
+        self.encoded_df_training = self.encoder.encode_df(self.df_training_numerical)
         if validation_file:
-            self.encoded_df_validation = self.encoder.encode_df(self.df_validation)
+            self.encoded_df_validation = self.encoder.encode_df(self.df_validation_numerical)
         if testing_file:
-            self.encoded_df_testing = self.encoder.encode_df(self.df_testing, False)
-
-        # Getting the datasets we're gonna work on: Convert dataset into another one
-        self.df_training_numerical = de.transform_sample(self.encoded_df_training, True)
-        if validation_file:
-            self.df_validation_numerical = de.transform_sample(self.encoded_df_validation, True)
-        if testing_file:
-            self.df_testing_numerical = de.transform_sample(self.encoded_df_testing, False)
+            self.encoded_df_testing = self.encoder.encode_df(self.df_testing_numerical, False)
 
         # Conform validation and/or testing DataFrame(s) columns to training DataFrame columns
         if validation_file:
-            self.df_validation_numerical = de.conform_test_to_training(self.df_training_numerical,
-                                                                       self.df_validation_numerical)
-            self.df_validation_numerical = self.df_validation_numerical.fillna(0)
+            self.encoded_df_validation = de.conform_test_to_training(self.encoded_df_training,
+                                                                     self.encoded_df_validation)
+            self.encoded_df_validation = self.encoded_df_validation.fillna(0)
         if testing_file:
-            self.df_testing_numerical = de.conform_test_to_training(self.df_training_numerical,
-                                                                       self.df_testing_numerical, False)
-            self.df_testing_numerical = self.df_testing_numerical.fillna(0)
+            self.encoded_df_testing = de.conform_test_to_training(self.encoded_df_training,
+                                                                  self.encoded_df_testing, False)
+            self.encoded_df_testing = self.encoded_df_testing.fillna(0)
 
     def init_tnv(self, n_estimators, max_depth):
         self.tnv = TrainValidateTest(n_estimators, max_depth)
 
     def train(self):
-        time_spent = self.tnv.train(self.df_training_numerical)
+        time_spent = self.tnv.train(self.encoded_df_training)
         return time_spent
 
     def validate(self):
-        acc = self.tnv.validate(self.df_validation_numerical)
+        acc = self.tnv.validate(self.encoded_df_validation)
         return acc
 
     def test(self):
-        self.tnv.test(self.df_testing_numerical, self.encoder)
+        self.tnv.test(self.encoded_df_testing, self.encoder)
